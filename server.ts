@@ -16,7 +16,7 @@ async function startServer() {
     try {
       const upgradeCommand = `
         git pull origin main && 
-        npm install --unsafe-perm --force && 
+        npm install --force && 
         npm run build && 
         pm2 restart kiroagent
       `;
@@ -24,6 +24,29 @@ async function startServer() {
       res.json({ success: true, message: 'Upgrade & Rebuild successful! Server is restarting...', logs: stdout + '\n' + stderr });
     } catch (err: any) {
       res.status(500).json({ success: false, message: 'Upgrade failed: ' + err.message });
+    }
+  });
+
+  app.get('/api/models', async (req, res) => {
+    try {
+      const { apiKey, baseUrl } = req.query;
+      if (!apiKey) return res.status(400).json({ success: false, message: 'API Key required' });
+      
+      const endpoint = baseUrl ? `${baseUrl}/models` : 'https://api.openai.com/v1/models';
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      
+      if (!response.ok) {
+         throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      res.json({ success: true, models: data.data || [] });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
     }
   });
 

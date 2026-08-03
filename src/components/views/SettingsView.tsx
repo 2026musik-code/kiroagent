@@ -15,6 +15,34 @@ export function SettingsView() {
   const [saved, setSaved] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
+  
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [modelError, setModelError] = useState('');
+
+  const fetchModels = async () => {
+    if (!config.apiKey) {
+      setModelError('API Key is required to fetch models');
+      return;
+    }
+    setFetchingModels(true);
+    setModelError('');
+    try {
+      const res = await fetch(`/api/models?apiKey=${encodeURIComponent(config.apiKey)}&baseUrl=${encodeURIComponent(config.baseUrl)}`);
+      const data = await res.json();
+      if (data.success && data.models) {
+        setAvailableModels(data.models.map((m: any) => m.id));
+        if (data.models.length > 0 && !data.models.find((m:any) => m.id === config.model)) {
+            setConfig({ ...config, model: data.models[0].id });
+        }
+      } else {
+        setModelError(data.message || 'Failed to fetch models');
+      }
+    } catch (err: any) {
+      setModelError(err.message);
+    }
+    setFetchingModels(false);
+  };
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('kiro_config');
@@ -79,23 +107,45 @@ export function SettingsView() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1.5">API Base URL</label>
-                <input
-                  type="text"
-                  value={config.baseUrl}
-                  onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
-                  placeholder="https://api.openai.com/v1"
-                  className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.baseUrl}
+                    onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
+                    placeholder="https://api.openai.com/v1"
+                    className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                  <button 
+                    onClick={fetchModels} 
+                    disabled={fetchingModels || !config.apiKey}
+                    className="px-3 py-2 bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 rounded-lg text-sm hover:bg-emerald-800/40 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[100px]"
+                  >
+                    {fetchingModels ? <Loader2 size={16} className="animate-spin" /> : 'Get Models'}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1.5">Model Name</label>
-                <input
-                  type="text"
-                  value={config.model}
-                  onChange={(e) => setConfig({ ...config, model: e.target.value })}
-                  placeholder="gpt-4o"
-                  className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
-                />
+                {availableModels.length > 0 ? (
+                  <select
+                    value={config.model}
+                    onChange={(e) => setConfig({ ...config, model: e.target.value })}
+                    className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
+                  >
+                    {availableModels.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={config.model}
+                    onChange={(e) => setConfig({ ...config, model: e.target.value })}
+                    placeholder="gpt-4o"
+                    className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                )}
+                {modelError && <p className="text-xs text-rose-400 mt-1.5">{modelError}</p>}
               </div>
             </div>
           </div>

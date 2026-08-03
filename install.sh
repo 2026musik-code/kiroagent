@@ -54,8 +54,8 @@ fi
 echo "[4/7] Menginstal modul NPM..."
 rm -rf node_modules package-lock.json dist
 if [ "$IS_TERMUX" = false ]; then
-  # Gunakan --unsafe-perm agar paket yang memerlukan build C++/Rust (esbuild, tailwind) bisa terinstall dengan baik oleh root
-  npm install --unsafe-perm --force
+  # Paksa instalasi menggunakan force untuk mengatasi masalah dependensi jika dijalankan sebagai root
+  npm install --force
 else
   npm install --force
 fi
