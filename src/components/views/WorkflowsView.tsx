@@ -107,84 +107,68 @@ export function WorkflowsView() {
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <header className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100 tracking-tight">Workflow Orchestrator</h2>
-          <p className="text-slate-400 mt-1">Multi-agent collaboration terminal</p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-xs font-medium text-slate-400">
-          <TerminalSquare size={14} />
-          tty1
+          <h2 className="text-2xl font-bold text-slate-100 tracking-tight">Agent Chat</h2>
+          <p className="text-slate-400 mt-1">Multi-agent collaboration interface</p>
         </div>
       </header>
 
-      <div className="flex-1 bg-[#0a0a0a] border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-2xl relative">
-        {/* Terminal Header */}
-        <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-2">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-            <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-            <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-          </div>
-          <span className="text-xs text-slate-500 font-mono ml-4">root@kiro-vps:~#</span>
-        </div>
-
-        {/* Terminal Body */}
-        <div className="flex-1 overflow-y-auto p-4 font-mono text-sm space-y-3">
+      <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-xl relative">
+        {/* Chat Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {logs.map((log) => (
-            <div key={log.id} className="flex gap-3">
-              <span className="text-slate-600 shrink-0">
-                [{log.timestamp.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
-              </span>
+            <div key={log.id} className={`flex flex-col max-w-[80%] ${log.sender === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-xs font-medium text-slate-400">
+                  {log.sender === 'user' ? 'You' : log.sender === 'agent' ? log.agentName || 'Agent' : 'System'}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  {log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
               
-              {log.sender === 'system' && (
-                <span className="text-slate-400">{log.text}</span>
-              )}
-              
-              {log.sender === 'user' && (
-                <div className="text-slate-200">
-                  <span className="text-blue-400 mr-2">➜</span>
-                  {log.text}
-                </div>
-              )}
-              
-              {log.sender === 'agent' && (
-                <div className="text-slate-300 flex flex-col w-full">
-                  <span className="text-emerald-400 mb-0.5">[{log.agentName}]</span>
+              <div className={`px-4 py-2 rounded-2xl text-sm ${
+                log.sender === 'user' 
+                  ? 'bg-blue-600 text-white rounded-br-none' 
+                  : log.sender === 'system'
+                  ? 'bg-slate-800 text-slate-300 rounded-bl-none border border-slate-700'
+                  : 'bg-emerald-900/30 text-slate-200 border border-emerald-800/50 rounded-bl-none'
+              }`}>
+                {log.sender === 'agent' ? (
                   <div className="prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown>{log.text}</ReactMarkdown>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <span className="whitespace-pre-wrap">{log.text}</span>
+                )}
+              </div>
             </div>
           ))}
           {isRunning && (
-            <div className="flex items-center gap-2 text-emerald-500 mt-4">
-              <Loader2 size={14} className="animate-spin" />
-              <span>Agents are processing...</span>
+            <div className="flex items-center gap-2 text-slate-400 mt-4 text-sm mr-auto bg-slate-800/50 px-4 py-2 rounded-2xl rounded-bl-none border border-slate-700/50 w-fit">
+              <Loader2 size={14} className="animate-spin text-emerald-500" />
+              <span>Agent is typing...</span>
             </div>
           )}
           <div ref={logsEndRef} />
         </div>
 
-        {/* Terminal Input */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800">
-          <form onSubmit={handleStartWorkflow} className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-500 font-mono font-bold">
-              $
-            </div>
+        {/* Chat Input */}
+        <div className="p-4 bg-slate-950 border-t border-slate-800">
+          <form onSubmit={handleStartWorkflow} className="relative flex gap-2">
             <input
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={isRunning}
-              placeholder="e.g. Deploy a new python backend on port 8080..."
-              className="w-full bg-[#0a0a0a] border border-slate-800 rounded-lg pl-8 pr-12 py-3 text-sm text-slate-200 font-mono focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50 transition-all"
+              placeholder="Ask the agent to perform a task..."
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-full pl-4 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 transition-all shadow-sm"
             />
             <button
               type="submit"
               disabled={isRunning || !prompt.trim()}
-              className="absolute inset-y-0 right-2 flex items-center justify-center text-slate-500 hover:text-emerald-400 disabled:opacity-50 transition-colors"
+              className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 transition-colors shadow-sm"
             >
-              <Send size={18} />
+              <Send size={18} className="ml-1" />
             </button>
           </form>
         </div>
