@@ -96,7 +96,8 @@ async function startServer() {
           },
           body: JSON.stringify({
             model: activeModel,
-            messages: messages
+            messages: messages,
+            stream: false
           })
         });
 
@@ -105,7 +106,35 @@ async function startServer() {
            throw new Error("API Error: " + chatRes.status + " " + errText);
         }
 
-        const data = await chatRes.json();
+        const rawText = await chatRes.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (e) {
+          if (rawText.includes("data: ")) {
+            const lines = rawText.split('\n');
+            let content = '';
+            for (const line of lines) {
+              if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+                try {
+                  const parsed = JSON.parse(line.substring(6));
+                  if (parsed.choices?.[0]?.delta?.content) {
+                    content += parsed.choices[0].delta.content;
+                  } else if (parsed.choices?.[0]?.message?.content) {
+                    content += parsed.choices[0].message.content;
+                  }
+                } catch (err) {}
+              }
+            }
+            if (content) {
+              data = { choices: [{ message: { content } }] };
+            } else {
+              throw new Error("Failed to parse stream response");
+            }
+          } else {
+            throw new Error("Invalid JSON response: " + rawText.substring(0, 100));
+          }
+        }
         let reply = data.choices?.[0]?.message?.content || '';
 
         // Extract commands
