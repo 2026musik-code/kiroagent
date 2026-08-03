@@ -12,6 +12,15 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.post('/api/system/upgrade', async (req, res) => {
+    try {
+      const { stdout, stderr } = await execAsync('git pull origin main', { timeout: 120000 });
+      res.json({ success: true, message: 'Upgrade successful! Restart the server to apply changes.', logs: stdout + '\n' + stderr });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   app.post('/api/agent/execute', async (req, res) => {
     const { prompt, apiKey, baseUrl, model } = req.body;
     

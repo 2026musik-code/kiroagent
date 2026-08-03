@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Key, Network, ShieldCheck } from 'lucide-react';
+import { Save, Key, Network, ShieldCheck, Download, Loader2 } from 'lucide-react';
 import { AppConfig } from '../../types';
 
 export function SettingsView() {
@@ -13,6 +13,8 @@ export function SettingsView() {
   });
 
   const [saved, setSaved] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState('');
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('kiro_config');
@@ -29,6 +31,23 @@ export function SettingsView() {
     localStorage.setItem('kiro_config', JSON.stringify(config));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    setUpgradeMsg('Pulling updates from GitHub...');
+    try {
+      const res = await fetch('/api/system/upgrade', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setUpgradeMsg('Upgrade successful! Please restart server.');
+      } else {
+        setUpgradeMsg(`Upgrade failed: ${data.message}`);
+      }
+    } catch (err: any) {
+      setUpgradeMsg(`Error: ${err.message}`);
+    }
+    setUpgrading(false);
   };
 
   return (
@@ -124,6 +143,28 @@ export function SettingsView() {
                 Auto-deploy web apps to localhost upon workflow completion
               </label>
             </div>
+          </div>
+        </div>
+
+        {/* System Updates */}
+        <div className="p-6 border-t border-slate-800">
+          <div className="flex items-center gap-3 mb-4 text-purple-400">
+            <Download size={20} />
+            <h3 className="font-semibold text-slate-200">System Updates</h3>
+          </div>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-slate-400">Pull the latest updates from the GitHub repository.</p>
+              {upgradeMsg && <p className="text-xs font-medium text-amber-400 mt-2">{upgradeMsg}</p>}
+            </div>
+            <button
+              onClick={handleUpgrade}
+              disabled={upgrading}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-700"
+            >
+              {upgrading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {upgrading ? 'Upgrading...' : 'Check for Updates'}
+            </button>
           </div>
         </div>
 
