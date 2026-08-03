@@ -5,8 +5,8 @@ import { AppConfig } from '../../types';
 export function SettingsView() {
   const [config, setConfig] = useState<AppConfig>({
     apiKey: '',
-    baseUrl: 'https://autoapp.biz.id/v1',
-    model: 'kiro/qwen3-coder-next',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
     serverIp: '127.0.0.1',
     autoDeploy: true,
     maxConcurrentAgents: 5

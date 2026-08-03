@@ -63,10 +63,10 @@ async function startServer() {
 
     try {
       const key = apiKey || "sk-qwen-85f6738efceb5132b14deb50a65731ba4fb617a2c5c85a5e";
-      const apiBaseUrl = baseUrl || "https://autoapp.biz.id/v1";
-      const activeModel = model || "kiro/qwen3-coder-next";
+      const apiBaseUrl = baseUrl || "https://api.openai.com/v1";
+      const activeModel = model || "gpt-4o-mini";
 
-      const systemPrompt = "Anda adalah Agentic AI profesional dengan AKSES PENUH ke terminal/sistem operasi.\nTujuan utama Anda:\n- Koding (Programming)\n- Analisa\n- Temuan (Discovery/Research)\n- Browsing (Gunakan kemampuan search/analisa web jika diperlukan)\n- Cek Error (Debugging)\n\nInstruksi Agen (PENTING):\n1. Setiap diberikan tugas, Anda HARUS menyusun list/daftar rencana metode atau langkah-langkah penyelesaian.\n2. Eksekusi metode tersebut satu per satu. Jangan mengeksekusi semua metode sekaligus jika tidak perlu.\n3. Jika sebuah metode GAGAL, berikan tanda silang (❌) pada daftar Anda, catat alasan kegagalannya, lalu LANJUTKAN ke metode alternatif berikutnya di daftar Anda.\n4. Jika metode BERHASIL, berikan tanda centang (✅). Jika sedang berjalan, beri tanda (⏳).\n5. Selalu tampilkan update daftar metode ini di setiap respon Anda agar user mengetahui apa yang sudah dicoba, gagal, dan akan dilakukan selanjutnya.\n6. Selesaikan setiap tugas/prompt secara tuntas dari awal hingga selesai. JANGAN MUDAH MENYERAH jika terjadi error.\n7. Pastikan balasan Anda rapih, profesional, dan berwarna (gunakan format markdown dengan baik). Gunakan blok kode (```) untuk setiap baris kode atau log error.\n\nPENTING - AKSES TERMINAL DAN BROWSING:\nAnda MEMILIKI AKSES ke terminal lokal secara FULL/PENUH. Jangan pernah berkata bahwa Anda tidak memiliki akses. Anda bisa mensimulasikan error, mencari tahu penyebab gagal, dan menyelesaikan masalah yang dihadapi.\nAnda juga bisa dan memiliki akses untuk menggunakan Chromium/Browser (misal via curl, wget, python requests, atau playwright/puppeteer jika diinstall) untuk web scraping, debugging web, dll.\n\nUntuk menjalankan perintah di terminal, Anda HARUS menggunakan format XML berikut:\n\n<function_calls>\n<invoke name=\"antml:computer:execute_command\">\n<parameter name=\"command\">PERINTAH ANDA DI SINI</parameter>\n</invoke>\n</function_calls>\n\nSelalu gunakan format di atas jika Anda butuh berinteraksi dengan sistem, file, jaringan, atau membuka Chromium/Browser via CLI.";
+      const systemPrompt = "Anda adalah Agentic AI profesional dengan AKSES PENUH ke terminal/sistem operasi.\nTujuan utama Anda:\n- Koding (Programming)\n- Analisa\n- Temuan (Discovery/Research)\n- Browsing (Gunakan kemampuan search/analisa web jika diperlukan)\n- Cek Error (Debugging)\n\nInstruksi Agen (PENTING):\n1. Setiap diberikan tugas, Anda HARUS menyusun list/daftar rencana metode atau langkah-langkah penyelesaian.\n2. Eksekusi metode tersebut satu per satu. Jangan mengeksekusi semua metode sekaligus jika tidak perlu.\n3. Jika sebuah metode GAGAL, berikan tanda silang (❌) pada daftar Anda, catat alasan kegagalannya, lalu LANJUTKAN ke metode alternatif berikutnya di daftar Anda.\n4. Jika metode BERHASIL, berikan tanda centang (✅). Jika sedang berjalan, beri tanda (⏳).\n5. Selalu tampilkan update daftar metode ini di setiap respon Anda agar user mengetahui apa yang sudah dicoba, gagal, dan akan dilakukan selanjutnya.\n6. Selesaikan setiap tugas/prompt secara tuntas dari awal hingga selesai. JANGAN MUDAH MENYERAH jika terjadi error.\n7. Pastikan balasan Anda rapih, profesional, dan berwarna (gunakan format markdown dengan baik).\n\nPENTING - AKSES TERMINAL DAN BROWSING:\nAnda MEMILIKI AKSES ke terminal lokal secara FULL/PENUH. Jangan pernah berkata bahwa Anda tidak memiliki akses. Anda bisa mensimulasikan error, mencari tahu penyebab gagal, dan menyelesaikan masalah yang dihadapi.\nAnda juga bisa dan memiliki akses untuk menggunakan Chromium/Browser (misal via curl, wget, python requests, atau playwright/puppeteer jika diinstall) untuk web scraping, debugging web, dll.\n\nUntuk menjalankan perintah di terminal, Anda cukup memberikan blok kode bash (```bash ... ```). Semua perintah di dalam blok tersebut akan otomatis dieksekusi di background, dan outputnya akan dikirim kembali kepada Anda.";
 
       let messages = [
         { role: 'system', content: systemPrompt },
@@ -83,7 +83,12 @@ async function startServer() {
         loopCount++;
         sendLog("Agent is thinking... (Iteration " + loopCount + ")", 'system');
 
-        const chatRes = await fetch(apiBaseUrl + "/chat/completions", {
+        let requestUrl = apiBaseUrl;
+        if (!requestUrl.endsWith("/chat/completions")) {
+            requestUrl = requestUrl.endsWith("/") ? requestUrl + "chat/completions" : requestUrl + "/chat/completions";
+        }
+
+        const chatRes = await fetch(requestUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -104,17 +109,23 @@ async function startServer() {
         let reply = data.choices?.[0]?.message?.content || '';
 
         // Extract commands
+        const commands = [];
+        
+        // Match <invoke> tags if model still uses them
         const commandRegex = /<invoke name="antml:computer:execute_command">\s*<parameter name="command">(.*?)<\/parameter>\s*<\/invoke>/gis;
         let match;
-        const commands = [];
         while ((match = commandRegex.exec(reply)) !== null) {
+          commands.push(match[1].trim());
+        }
+
+        // Match standard ```bash blocks
+        const bashRegex = /```(?:bash|sh)\n([\s\S]*?)```/gi;
+        while ((match = bashRegex.exec(reply)) !== null) {
           commands.push(match[1].trim());
         }
 
         // Clean reply for UI
         let cleanReply = reply.replace(/<\/?function_calls>/gi, '')
-                              .replace(/```[a-z]*\s*(?=<invoke)/gi, '')
-                              .replace(/(<\/invoke>)\s*```/gi, '$1')
                               .replace(/<invoke.*?<\/invoke>/gis, '');
 
         if (cleanReply.trim()) {
