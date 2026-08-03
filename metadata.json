@@ -1,0 +1,8 @@
+{
+  "name": "Kiro AI Dashboard",
+  "description": "Web dashboard for managing Kiro AI CLI agents on VPS/Termux, featuring multi-agent workflow orchestration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
