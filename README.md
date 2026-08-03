@@ -9,79 +9,44 @@ Kiro Agentic adalah Agentic AI profesional dengan antarmuka dashboard web. Proye
 - 🔄 **Auto Update**: Tombol "Check for Updates" di menu Settings untuk langsung melakukan *git pull* dari repositori GitHub secara otomatis.
 - 💻 **Akses CLI Penuh**: Agen di backend secara langsung menjalankan perintah pada shell server host.
 
-## Cara Instalasi (VPS atau Termux)
+## Cara Instalasi (Sangat Mudah untuk VPS Ubuntu/Debian & Termux Android)
 
-### 1. Persiapan Sistem
-Pastikan Anda sudah menginstal Git dan Node.js di server VPS atau perangkat Android (Termux) Anda.
+Kami telah menyiapkan script instalasi otomatis (`install.sh`) yang akan mengatur Node.js, menginstal dependensi, mem-build aplikasi, membuka port di Firewall (jika VPS), dan menjalankan Kiro Agentic di background menggunakan PM2 secara otomatis!
 
-**Untuk VPS (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install git nodejs npm -y
-```
+Jalankan perintah berikut secara berurutan di terminal VPS atau Termux Anda:
 
-**Untuk Termux:**
-```bash
-pkg update
-pkg install git nodejs -y
-```
-
-### 2. Clone Repositori
-Clone repositori Kiro Agentic ke dalam sistem Anda:
 ```bash
 git clone https://github.com/2026musik-code/kiroagent.git
 cd kiroagent
+chmod +x install.sh
+./install.sh
 ```
 
-### 3. Instalasi Dependensi
-Instal semua module Node.js yang dibutuhkan aplikasi (Express, React, Vite, dll):
-```bash
-npm install
-```
+Tunggu prosesnya hingga selesai. Setelah selesai, web akan otomatis berjalan di port `3000` di IP server Anda, dan akan tetap online di background (menggunakan `pm2`).
 
-### 4. Build Proyek (Wajib)
-Proyek ini menggabungkan frontend React (Vite) dan backend Express. Anda harus melakukan build terlebih dahulu:
-```bash
-npm run build
-```
+---
 
-### 5. Menjalankan Server
-Setelah proses build selesai tanpa error, jalankan production server:
-```bash
-npm start
-```
-*(Catatan: Anda bisa menggunakan manajer proses seperti `pm2` jika ingin menjalankannya di background pada VPS, misalnya: `pm2 start npm --name "kiroagent" -- start`)*
+## Cara Update Aplikasi
 
-### 6. Akses Dashboard
-Buka browser dan kunjungi:
-```
-http://<IP_VPS_ANDA>:3000
-```
-*(Gunakan `http://localhost:3000` atau `http://127.0.0.1:3000` jika Anda menjalankannya secara lokal/Termux).*
+Karena aplikasi sedang dalam masa perkembangan aktif, Anda tidak perlu pusing melakukan pull & build manual.
+Cukup buka **Dashboard Web Kiro Agentic -> Settings -> Klik tombol "Check for Updates"**.
+Aplikasi akan secara otomatis mendownload pembaruan terbaru dari Github, melakukan build, dan merestart server (membutuhkan waktu 1-3 menit).
 
 ---
 
 ## Troubleshooting (Masalah Umum)
 
-### Error `Cannot find native binding` saat menjalankan `npm run build`
-Error ini kadang terjadi karena versi NPM gagal mendownload modul *native* (Rust/C++) milik Tailwind CSS v4 secara otomatis. Solusinya:
+### 1. Web tidak bisa diakses (ERR_CONNECTION_ABORTED / Site can't be reached)
+Script `install.sh` sudah otomatis membuka port 3000 pada Firewall (UFW) internal VPS Ubuntu.
+**Penting:** Jika Anda menggunakan VPS dari provider seperti AWS, Google Cloud, Azure, Hostinger, IdCloudHost, atau DigitalOcean, **pastikan juga Anda sudah membuka Port 3000 di bagian pengaturan Security Groups / Firewall** melalui dashboard provider VPS Anda tersebut.
 
-1. Hapus `node_modules` dan `package-lock.json`:
-   ```bash
-   rm -rf node_modules package-lock.json
-   ```
-2. Instal ulang *dependencies* dan paksa download arsitektur yang benar:
-   ```bash
-   npm install --force
-   ```
-3. (Opsional) Jika masih gagal, cobalah update Node.js Anda ke versi yang lebih baru (versi 20+) menggunakan [nvm](https://github.com/nvm-sh/nvm):
-   ```bash
-   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-   source ~/.bashrc
-   nvm install 20
-   nvm use 20
-   npm install
-   ```
+### 2. Error Node.js / NPM saat build
+Jika Anda tidak menggunakan `install.sh` dan mengalami error build `Cannot find native binding` terkait Tailwind CSS, gunakan perintah:
+```bash
+rm -rf node_modules package-lock.json dist
+npm install --unsafe-perm --force
+npm run build
+```
 
 ---
 

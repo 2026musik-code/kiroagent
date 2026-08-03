@@ -14,10 +14,16 @@ async function startServer() {
 
   app.post('/api/system/upgrade', async (req, res) => {
     try {
-      const { stdout, stderr } = await execAsync('git pull origin main', { timeout: 120000 });
-      res.json({ success: true, message: 'Upgrade successful! Restart the server to apply changes.', logs: stdout + '\n' + stderr });
+      const upgradeCommand = `
+        git pull origin main && 
+        npm install --unsafe-perm --force && 
+        npm run build && 
+        pm2 restart kiroagent
+      `;
+      const { stdout, stderr } = await execAsync(upgradeCommand, { timeout: 300000 });
+      res.json({ success: true, message: 'Upgrade & Rebuild successful! Server is restarting...', logs: stdout + '\n' + stderr });
     } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: 'Upgrade failed: ' + err.message });
     }
   });
 
