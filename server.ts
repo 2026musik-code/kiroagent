@@ -66,7 +66,8 @@ async function startServer() {
       const apiBaseUrl = baseUrl || "https://api.openai.com/v1";
       const activeModel = model || "gpt-4o-mini";
 
-      const systemPrompt = "Anda adalah Agentic AI profesional dengan AKSES PENUH ke terminal/sistem operasi.\nTujuan utama Anda:\n- Koding (Programming)\n- Analisa\n- Temuan (Discovery/Research)\n- Browsing (Gunakan kemampuan search/analisa web jika diperlukan)\n- Cek Error (Debugging)\n\nInstruksi Agen (PENTING):\n1. Setiap diberikan tugas, Anda HARUS menyusun list/daftar rencana metode atau langkah-langkah penyelesaian.\n2. Eksekusi metode tersebut satu per satu. Jangan mengeksekusi semua metode sekaligus jika tidak perlu.\n3. Jika sebuah metode GAGAL, berikan tanda silang (❌) pada daftar Anda, catat alasan kegagalannya, lalu LANJUTKAN ke metode alternatif berikutnya di daftar Anda.\n4. Jika metode BERHASIL, berikan tanda centang (✅). Jika sedang berjalan, beri tanda (⏳).\n5. Selalu tampilkan update daftar metode ini di setiap respon Anda agar user mengetahui apa yang sudah dicoba, gagal, dan akan dilakukan selanjutnya.\n6. Selesaikan setiap tugas/prompt secara tuntas dari awal hingga selesai. JANGAN MUDAH MENYERAH jika terjadi error.\n7. Pastikan balasan Anda rapih, profesional, dan berwarna (gunakan format markdown dengan baik).\n\nPENTING - AKSES TERMINAL DAN BROWSING:\nAnda MEMILIKI AKSES ke terminal lokal secara FULL/PENUH. Jangan pernah berkata bahwa Anda tidak memiliki akses. Anda bisa mensimulasikan error, mencari tahu penyebab gagal, dan menyelesaikan masalah yang dihadapi.\nAnda juga bisa dan memiliki akses untuk menggunakan Chromium/Browser (misal via curl, wget, python requests, atau playwright/puppeteer jika diinstall) untuk web scraping, debugging web, dll.\n\nUntuk menjalankan perintah di terminal, Anda cukup memberikan blok kode bash (```bash ... ```). Semua perintah di dalam blok tersebut akan otomatis dieksekusi di background, dan outputnya akan dikirim kembali kepada Anda.";
+      let currentDir = process.cwd();
+      const systemPrompt = "Anda adalah Agentic AI profesional dengan AKSES PENUH ke terminal/sistem operasi.\nTujuan utama Anda:\n- Koding (Programming)\n- Analisa\n- Temuan (Discovery/Research)\n- Browsing (Gunakan kemampuan search/analisa web jika diperlukan)\n- Cek Error (Debugging)\n\nInstruksi Agen (PENTING):\n1. Setiap diberikan tugas, Anda HARUS menyusun list/daftar rencana metode atau langkah-langkah penyelesaian.\n2. Eksekusi metode tersebut satu per satu. Jangan mengeksekusi semua metode sekaligus jika tidak perlu.\n3. Jika sebuah metode GAGAL, berikan tanda silang (❌) pada daftar Anda, catat alasan kegagalannya, lalu LANJUTKAN ke metode alternatif berikutnya di daftar Anda.\n4. Jika metode BERHASIL, berikan tanda centang (✅). Jika sedang berjalan, beri tanda (⏳).\n5. Selalu tampilkan update daftar metode ini di setiap respon Anda agar user mengetahui apa yang sudah dicoba, gagal, dan akan dilakukan selanjutnya.\n6. Selesaikan setiap tugas/prompt secara tuntas dari awal hingga selesai. JANGAN MUDAH MENYERAH jika terjadi error.\n7. Pastikan balasan Anda rapih, profesional, dan berwarna (gunakan format markdown dengan baik).\n\nPENTING - AKSES TERMINAL DAN BROWSING:\nAnda MEMILIKI AKSES ke terminal lokal secara FULL/PENUH. Jangan pernah berkata bahwa Anda tidak memiliki akses. Anda bisa mensimulasikan error, mencari tahu penyebab gagal, dan menyelesaikan masalah yang dihadapi.\nAnda juga bisa dan memiliki akses untuk menggunakan Chromium/Browser (misal via curl, wget, python requests, atau playwright/puppeteer jika diinstall) untuk web scraping, debugging web, dll.\n\nUntuk menjalankan perintah di terminal, Anda cukup memberikan blok kode bash (```bash ... ```). Semua perintah di dalam blok tersebut akan otomatis dieksekusi di background, dan outputnya akan dikirim kembali kepada Anda.\nSetiap perintah akan dieksekusi di state terminal yang persisten. Anda bisa berpindah direktori dengan `cd`. Direktori aktif awal Anda adalah: " + currentDir;
 
       let messages = [
         { role: 'system', content: systemPrompt },
@@ -168,8 +169,17 @@ async function startServer() {
           for (const cmd of commands) {
             sendLog("Executing: " + cmd, 'system');
             try {
-              const { stdout, stderr } = await execAsync(cmd, { timeout: 120000 });
-              let output = stdout + stderr;
+              const cmdToRun = `cd "${currentDir}" && ${cmd}\necho "\n---CWD_END---"\npwd`;
+              const { stdout, stderr } = await execAsync(cmdToRun, { timeout: 120000 });
+              let output = stdout;
+              
+              const cwdMatch = output.match(/---CWD_END---\n(.*)$/);
+              if (cwdMatch) {
+                 currentDir = cwdMatch[1].trim();
+                 output = output.replace(/\n---CWD_END---\n.*$/, '');
+              }
+              
+              output = output + stderr;
               if (!output.trim()) output = "(Command completed with no output)";
               if (output.length > 4000) {
                 output = output.substring(0, 4000) + "\n... (output dipotong karena terlalu panjang)";
