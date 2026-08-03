@@ -61,6 +61,30 @@ http://<IP_VPS_ANDA>:3000
 
 ---
 
+## Troubleshooting (Masalah Umum)
+
+### Error `Cannot find native binding` saat menjalankan `npm run build`
+Error ini kadang terjadi karena versi NPM gagal mendownload modul *native* (Rust/C++) milik Tailwind CSS v4 secara otomatis. Solusinya:
+
+1. Hapus `node_modules` dan `package-lock.json`:
+   ```bash
+   rm -rf node_modules package-lock.json
+   ```
+2. Instal ulang *dependencies* dan paksa download arsitektur yang benar:
+   ```bash
+   npm install --force
+   ```
+3. (Opsional) Jika masih gagal, cobalah update Node.js Anda ke versi yang lebih baru (versi 20+) menggunakan [nvm](https://github.com/nvm-sh/nvm):
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+   source ~/.bashrc
+   nvm install 20
+   nvm use 20
+   npm install
+   ```
+
+---
+
 ## Memulai Penggunaan
 1. Arahkan browser Anda ke dashboard web Kiro Agentic.
 2. Buka menu **Settings**.
